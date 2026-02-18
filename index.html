@@ -113,6 +113,7 @@ function App(){
   const[mF,sMF]=useState(false);const[exI,sExI]=useState(null);const[spM,sSpM]=useState(null);
   const[hSz,sHSz]=useState(4);const[rT,sRT]=useState(null);const[mA,sMA]=useState(null);
   const[slideFrom,setSlideFrom]=useState(null);
+  const[retCf,setRetCf]=useState(false);
   const spR=useRef(null);
 
   /* ALT */
@@ -171,7 +172,7 @@ function App(){
   const pClr=useCallback((rs,cc,fH,fD,cb)=>{const fi=[];for(let i=0;i<ROWS;i++)if(rs[i].length>0&&Math.abs(rSum(rs[i])-1)<0.001)fi.push(i);if(!fi.length){sRows(rs);if(cc>1){sMsg(cc+"連続クリア！+"+(cc*200)+"🔥");setTimeout(()=>sMsg(null),1200);}sChn(0);cb&&cb(rs,fH,fD);return;}
     sEq(bEq(rs[fi[0]]));setTimeout(()=>sEq(null),1800);if(msn&&!mD.includes(msn.id)){for(const idx of fi){if(msn.ck(rs[idx])){sSc(s=>s+msn.pts);sMD(d=>[...d,msn.id]);sMF(true);setTimeout(()=>{sMF(false);sMsn(pickM([...mD,msn.id]));},1500);break;}}}for(const idx of fi){const cnt=rs[idx].filter(b=>!b.type).length;if(cnt===2){sSc(s=>s+500);sMsg("パーフェクト！+500🌟");setTimeout(()=>sMsg(null),1500);}else if(cnt===3)sSc(s=>s+200);}sClrR(fi);sRows(rs);sShk(true);setTimeout(()=>sShk(false),200);const nc=cc+1;sChn(nc);const pts=fi.reduce((s,i)=>s+rs[i].length,0)*100+fi.length*300+(nc>1?nc*200:0);sSc(s=>s+Math.floor(pts));sTc(t=>t+fi.length);setTimeout(()=>{const c2=rs.map((r,i)=>fi.includes(i)?[]:[...r]);const ne=c2.filter(r=>r.length>0);const st=[...Array.from({length:ROWS-ne.length},()=>[]),...ne];sClrR([]);pClr(st,nc,fH,fD,cb);},400);},[msn,mD]);
 
-  function startG(d){const dd=d||df||"normal";sDf(dd);const m=DM[dd];sHSz(m.hs);const dk=bDeck(dd),{drawn,rest}=drw(dk,m.hs);sDeck(rest);sHand(drawn);sRows(Array.from({length:ROWS},()=>[]));sSc(0);sTrn(0);sTc(0);sClrR([]);sNwB([]);sSel(null);sSkp(m.skips);sChn(0);sMsn(pickM([]));sMD([]);sMF(false);sExI(null);sSpM(null);sRT(null);sMA(null);setSlideFrom(null);sAltSession(0);setMyRkPos(null);setMyRkEntry(null);sGs("playing");}
+  function startG(d){const dd=d||df||"normal";sDf(dd);const m=DM[dd];sHSz(m.hs);const dk=bDeck(dd),{drawn,rest}=drw(dk,m.hs);sDeck(rest);sHand(drawn);sRows(Array.from({length:ROWS},()=>[]));sSc(0);sTrn(0);sTc(0);sClrR([]);sNwB([]);sSel(null);sSkp(m.skips);sChn(0);sMsn(pickM([]));sMD([]);sMF(false);sExI(null);sSpM(null);sRT(null);sMA(null);setSlideFrom(null);setRetCf(false);sAltSession(0);setMyRkPos(null);setMyRkEntry(null);sGs("playing");}
 
   const cFit=useCallback((f,rb)=>!f.type&&rSum(rb)+fv(f)<=1.001,[]);
   const cAny=useCallback((h,rs)=>{for(const c of h){if(c.type){for(const r of rs)if(r.length>0)return true;}else{for(const r of rs)if(cFit(c,r))return true;}}return false;},[cFit]);
@@ -219,35 +220,42 @@ function App(){
   const appRed=useCallback((ri,bi,nf)=>{const nr=rows.map(r=>r.map(b=>({...b})));const old=nr[ri][bi];if(Math.abs(fv(old)-fv(nf))>0.001)return;nr[ri][bi]={...old,n:nf.n,d:nf.d};recalcX(nr[ri]);const mr=aMerge(nr,ri);const fr=mr.mg?mr.rows:nr;sRows(fr);sRT(null);if(!mr.mg){sMsg("🔄 "+old.n+"/"+old.d+" → "+nf.n+"/"+nf.d);setTimeout(()=>sMsg(null),800);}if(Math.abs(rSum(fr[ri])-1)<0.001)setTimeout(()=>pClr(fr,0,hand,deck,(s)=>{sRows(s);}),300);},[rows,hand,deck,pClr]);
   const doEx=useCallback((hi,nf)=>{const nh=[...hand];const o=nh[hi];nh[hi]={...nf};sHand(nh);sExI(null);sMsg("🔄 "+o.n+"/"+o.d+" → "+nf.n+"/"+nf.d);setTimeout(()=>sMsg(null),800);},[hand]);
   function skip(){if(skp<=0||gs!=="playing")return;sSkp(s=>s-1);if(deck.length>=hSz){const{drawn,rest}=drw(deck,hSz);sHand(drawn);sDeck(rest);}else if(deck.length>0){sHand([...deck]);sDeck([]);}sSel(null);sTrn(t=>t+1);sExI(null);cancelSp();}
+  function doRetire(){setRetCf(false);cancelSp();sSel(null);sGs("retire");}
 
   useEffect(()=>{if(gs!=="playing")return;if(hand.length===0&&deck.length===0)setTimeout(()=>sGs("perfect"),300);else if(hand.length>0&&!cAny(hand,rows)&&skp<=0&&deck.length===0)setTimeout(()=>sGs("gameover"),500);},[hand,deck,rows,gs,cAny,skp]);
 
   /* ─── Game end: ALT award + ranking save ─── */
   const bonusAwarded=useRef(false);
   useEffect(()=>{
-    if((gs==="perfect"||gs==="gameover")&&!bonusAwarded.current){
+    if((gs==="perfect"||gs==="gameover"||gs==="retire")&&!bonusAwarded.current){
       bonusAwarded.current=true;
       const isPerfect=gs==="perfect";
-      const rank=isPerfect?{r:"S",c:"#FFE66D"}:gRank(sc,trn,tc);
-      /* ALT: simple design */
+      const isRetire=gs==="retire";
+      /* completion bonus for natural game end */
+      let cmpB=0;
+      if(!isRetire&&!isPerfect&&tc>=1){cmpB=300;sSc(s=>s+300);}
+      const finalSc=sc+cmpB;
+      const rank=isPerfect?{r:"S",c:"#FFE66D"}:gRank(finalSc,trn,tc);
+      /* ALT: retire=1(if cleared), gameover=3, perfect=10 */
       let alt=0;
       if(isPerfect)alt=10;
+      else if(isRetire)alt=tc>=1?1:0;
       else if(tc>=1)alt=3;
       let fcb=0;
-      if(df&&!clearedDiffs.includes(df)&&tc>=1){fcb=5;sClearedDiffs(p=>[...p,df]);}
+      if(df&&!clearedDiffs.includes(df)&&tc>=1&&!isRetire){fcb=5;sClearedDiffs(p=>[...p,df]);}
       const totalAlt=alt+fcb;
       sAltSession(totalAlt);
       if(totalAlt>0){sAltTotal(t=>t+totalAlt);setTimeout(()=>addAltFloat(totalAlt),500);}
       /* save ranking if name set and scored */
-      if(lineName.trim()&&sc>0&&df){saveScore(lineName.trim(),sc,df,rank.r,rank.c);}
-      /* TRAIL: send result to GAS */
-      if(sc>0){sendResult(sc);}
+      if(lineName.trim()&&finalSc>0&&df){saveScore(lineName.trim(),finalSc,df,rank.r,rank.c);}
+      /* TRAIL: send result to GAS (not for retire) */
+      if(finalSc>0&&!isRetire){sendResult(finalSc);}
     }
   },[gs]);
   useEffect(()=>{if(gs==="playing"){bonusAwarded.current=false;trailSent=false;}},[gs]);
 
-  const bH=ROWS*RH;const isPf=gs==="perfect";
-  const ri=isPf?{r:"S",c:"#FFE66D",m:"パーフェクト！全カード制覇！🏆"}:gRank(sc,trn,tc);
+  const bH=ROWS*RH;const isPf=gs==="perfect";const isRt=gs==="retire";
+  let ri=isPf?{r:"S",c:"#FFE66D",m:"パーフェクト！全カード制覇！🏆"}:gRank(sc,trn,tc);if(isRt)ri={...ri,m:"また遊ぼう！👋"};
   const stars=isPf||ri.r==="S"?3:ri.r==="A"?2:1;
   const maxW=isTab?580:460;const cardW=isTab?(hSz>4?82:96):(hSz>4?66:76);
   function sendLine(){const mt="【分数テトリス ALT報告】\n名前: "+lineName+"\n💰 "+altTotal+"ALT";window.open("https://line.me/R/oaMessage/@trail_official/?"+encodeURIComponent(mt),"_blank");sAltTotal(0);sAltSession(0);sLineConfirm(false);}
@@ -292,7 +300,7 @@ function App(){
     </div>)}
 
     {/* ─── PLAYING / RESULT ─── */}
-    {(gs==="playing"||gs==="gameover"||gs==="perfect")&&(<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:isTab?14:10}}>
+    {(gs==="playing"||gs==="gameover"||gs==="perfect"||gs==="retire")&&(<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:isTab?14:10}}>
       <div style={{display:"flex",gap:isTab?20:14,alignItems:"center",flexWrap:"wrap",justifyContent:"center"}}>
         {[{l:"スコア",v:sc,c:"#FFE66D"},{l:"ターン",v:trn,c:"#4ECDC4"},{l:"クリア",v:tc,c:"#A78BFA"},{l:"残り",v:deck.length,c:"#F97316"}].map(({l,v,c})=>(<div key={l} style={{textAlign:"center"}}><div style={{fontSize:Math.round(9*fs),opacity:0.4}}>{l}</div><div className="sp" key={l+v} style={{fontSize:Math.round(17*fs),fontWeight:700,color:c}}>{v}</div></div>))}
       </div>
@@ -321,15 +329,26 @@ function App(){
         {eq&&<div className="eqp" style={{position:"absolute",bottom:12,left:"50%",zIndex:10,pointerEvents:"none"}}>{eq}</div>}
         {msg&&<div className="mp" style={{position:"absolute",top:"35%",left:"50%",pointerEvents:"none",zIndex:10}}>{msg}</div>}
 
+        {/* ─── RETIRE CONFIRMATION ─── */}
+        {retCf&&gs==="playing"&&(<div className="fi" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.85)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",backdropFilter:"blur(6px)",borderRadius:12,zIndex:25,padding:16}}>
+          <div style={{fontSize:Math.round(18*fs),fontWeight:700,marginBottom:6}}>途中で終了する？</div>
+          <div style={{fontSize:Math.round(11*fs),opacity:0.6,marginBottom:16,textAlign:"center",lineHeight:1.8}}>完走ボーナス（+300点）なし<br/>ALTも少なくなります</div>
+          <div style={{display:"flex",gap:10}}>
+            <button onClick={()=>setRetCf(false)} className="bs" style={{padding:isTab?"10px 24px":"8px 20px",fontSize:Math.round(13*fs),fontWeight:700,fontFamily:"'Fredoka',sans-serif",background:"linear-gradient(135deg,#4ECDC4,#2dbdb4)",color:"#fff",border:"none",borderRadius:12,cursor:"pointer",boxShadow:"0 4px 16px rgba(78,205,196,0.35)"}}>続ける</button>
+            <button onClick={doRetire} className="bs" style={{padding:isTab?"10px 24px":"8px 20px",fontSize:Math.round(13*fs),fontWeight:600,fontFamily:"'Fredoka',sans-serif",background:"rgba(255,255,255,0.06)",color:"rgba(255,255,255,0.7)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:12,cursor:"pointer"}}>やめる</button>
+          </div>
+        </div>)}
         {/* ─── RESULT OVERLAY ─── */}
-        {(gs==="gameover"||gs==="perfect")&&(<div className="fi" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.88)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",backdropFilter:"blur(6px)",borderRadius:12,zIndex:20,padding:isTab?16:8,overflow:"auto"}}>
-          {isPf?(<><div style={{fontSize:isTab?44:36,marginBottom:4}}>🎉</div><div style={{fontSize:Math.round(22*fs),fontWeight:700,color:"#FFE66D",textShadow:"0 0 20px rgba(255,230,109,0.5)"}}>パーフェクトクリア！</div></>):(<div style={{fontSize:Math.round(20*fs),fontWeight:700,marginBottom:2}}>おつかれさま！</div>)}
+        {(gs==="gameover"||gs==="perfect"||gs==="retire")&&(<div className="fi" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.88)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",backdropFilter:"blur(6px)",borderRadius:12,zIndex:20,padding:isTab?16:8,overflow:"auto"}}>
+          {isPf?(<><div style={{fontSize:isTab?44:36,marginBottom:4}}>🎉</div><div style={{fontSize:Math.round(22*fs),fontWeight:700,color:"#FFE66D",textShadow:"0 0 20px rgba(255,230,109,0.5)"}}>パーフェクトクリア！</div></>):isRt?(<div style={{fontSize:Math.round(20*fs),fontWeight:700,marginBottom:2}}>途中終了</div>):(<div style={{fontSize:Math.round(20*fs),fontWeight:700,marginBottom:2}}>おつかれさま！</div>)}
           {df&&<div style={{fontSize:Math.round(10*fs),opacity:0.5,marginBottom:2}}>{DM[df].emoji+" "+DM[df].label}</div>}
           <div style={{fontSize:Math.round(20*fs),marginBottom:2,letterSpacing:4}}>{"★".repeat(stars)+"☆".repeat(3-stars)}</div>
           <div style={{fontSize:isTab?50:42,fontWeight:700,color:ri.c,textShadow:"0 0 20px "+ri.c+"66",lineHeight:1}}>{ri.r}</div>
           <div style={{fontSize:Math.round(12*fs),color:ri.c,marginBottom:4,fontWeight:600}}>{ri.m}</div>
           <div style={{fontSize:Math.round(13*fs),opacity:0.8,marginBottom:1}}>スコア: <span style={{color:"#FFE66D",fontWeight:700,fontSize:Math.round(18*fs)}}>{sc.toLocaleString()}</span></div>
           <div style={{fontSize:Math.round(10*fs),opacity:0.5,marginBottom:4}}>{trn}ターン / {tc}行クリア</div>
+          {!isPf&&!isRt&&tc>=1&&(<div style={{fontSize:Math.round(11*fs),color:"#4ECDC4",fontWeight:600,marginBottom:2}}>🎁 完走ボーナス +300</div>)}
+          {isRt&&(<div style={{fontSize:Math.round(10*fs),opacity:0.5,marginBottom:2}}>💡 最後まで遊ぶと完走ボーナス+300点</div>)}
           {/* ALT BIG DISPLAY */}
           {altSession>0&&(<div className="alt-result" style={{background:"rgba(78,205,196,0.12)",borderRadius:12,padding:isTab?"8px 24px":"6px 18px",border:"1.5px solid rgba(78,205,196,0.3)",marginBottom:6,textAlign:"center"}}>
             <div style={{fontSize:Math.round(28*fs),fontWeight:700,color:"#4ECDC4",lineHeight:1.2}}>+{altSession} ALT</div>
@@ -359,7 +378,7 @@ function App(){
             {exI===i&&!isSp&&(<div className="fi" style={{position:"absolute",bottom:"100%",left:"50%",transform:"translateX(-50%)",marginBottom:6,background:"rgba(30,27,75,0.95)",borderRadius:10,padding:isTab?"10px 8px":"8px 6px",border:"1px solid rgba(255,255,255,0.12)",display:"flex",flexDirection:"column",gap:isTab?5:4,zIndex:30,minWidth:isTab?90:70,boxShadow:"0 8px 24px rgba(0,0,0,0.4)"}}><div style={{fontSize:Math.round(9*fs),opacity:0.5,textAlign:"center"}}>🔄 変換先</div>{eo.map((o,oi)=>(<button key={oi} onClick={e=>{e.stopPropagation();doEx(i,o);}} className="bs" style={{padding:isTab?"6px 10px":"5px 8px",borderRadius:7,fontSize:Math.round(14*fs),fontWeight:600,background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",color:(CC[o.d]||CC[2]).lt,cursor:"pointer",fontFamily:"'Fredoka',sans-serif",textAlign:"center"}}>{o.n}/{o.d}</button>))}</div>)}
           </div>);})}
         </div>
-        <button onClick={skip} disabled={skp<=0} className="bs" style={{padding:isTab?"8px 24px":"6px 18px",fontSize:Math.round(11*fs),fontWeight:600,fontFamily:"'Fredoka',sans-serif",background:skp>0?"rgba(255,255,255,0.06)":"rgba(255,255,255,0.02)",color:skp>0?"#fff":"rgba(255,255,255,0.3)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,cursor:skp>0?"pointer":"default"}}>{"🔄 手札チェンジ（残り"+skp+"回）"}</button>
+        <div style={{display:"flex",gap:8,alignItems:"center"}}><button onClick={skip} disabled={skp<=0} className="bs" style={{padding:isTab?"8px 24px":"6px 18px",fontSize:Math.round(11*fs),fontWeight:600,fontFamily:"'Fredoka',sans-serif",background:skp>0?"rgba(255,255,255,0.06)":"rgba(255,255,255,0.02)",color:skp>0?"#fff":"rgba(255,255,255,0.3)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,cursor:skp>0?"pointer":"default"}}>{"🔄 手札チェンジ（残り"+skp+"回）"}</button><button onClick={()=>setRetCf(true)} className="bs" style={{padding:isTab?"8px 16px":"6px 12px",fontSize:Math.round(10*fs),fontWeight:600,fontFamily:"'Fredoka',sans-serif",background:"rgba(255,255,255,0.03)",color:"rgba(255,255,255,0.4)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:10,cursor:"pointer"}}>⏹ やめる</button></div>
       </div>)}
     </div>)}
 
