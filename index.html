@@ -12,29 +12,29 @@
 <body>
 <div id="root"></div>
 <script type="text/babel">
-// ─── TRAIL ALT・ランキング連携 ───────────────────────────
-const GAS_URL     = 'https://script.google.com/macros/s/AKfycbzKUyiUHIMp9JRFX0LEa88plEoavkbrjTQ5oHf9T-FDd6b4fhqfTCBVBy5rWUZPUQbY/exec';
-const GAME_ID     = 5;
-const GAME_NAME   = '分数テトリス';
-const SCORE_LABEL = '点';
-const ALT_AMOUNT  = 10;
+// ─── TRAIL GP3 API連携 ───────────────────────────────────
+const TRAIL_API = 'https://trail-game-pro-3-2.onrender.com';
 const TRAIL_PLAYER = new URLSearchParams(location.search).get('player') || null;
 
 let trailSent = false;
-async function sendResult(score) {
+async function sendResultToTrail(score) {
   if (!TRAIL_PLAYER || trailSent) return;
   trailSent = true;
-  const opt = { method:'POST', redirect:'follow', headers:{'Content-Type':'text/plain'} };
-  await fetch(GAS_URL, { ...opt, body: JSON.stringify({
-    action: 'saveRanking',
-    gameId: GAME_ID, gameName: GAME_NAME,
-    player: TRAIL_PLAYER, score: score, scoreLabel: SCORE_LABEL
-  })});
-  await fetch(GAS_URL, { ...opt, body: JSON.stringify({
-    action: 'addCoin',
-    player: TRAIL_PLAYER, gameId: GAME_ID,
-    gameName: GAME_NAME, amount: ALT_AMOUNT
-  })});
+  try {
+    await fetch(`${TRAIL_API}/api/external/game-result`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        player: TRAIL_PLAYER,
+        game_id: 'bunsuu-tetris',
+        game_name: '分数テトリス',
+        score: score,
+        alt: 10
+      })
+    });
+  } catch (e) {
+    console.error('ALT送信失敗:', e);
+  }
 }
 // ─────────────────────────────────────────────────────────
 
@@ -120,7 +120,7 @@ function App(){
   const[altTotal,sAltTotal]=useState(0);const[altSession,sAltSession]=useState(0);
   const[altFloats,sAltFloats]=useState([]);
   const[clearedDiffs,sClearedDiffs]=useState([]);
-  const[lineName,sLineName]=useState("");const[lineConfirm,sLineConfirm]=useState(false);
+  const[lineName,sLineName]=useState("");
   const altIdRef=useRef(0);
 
   /* Ranking */
@@ -248,8 +248,8 @@ function App(){
       if(totalAlt>0){sAltTotal(t=>t+totalAlt);setTimeout(()=>addAltFloat(totalAlt),500);}
       /* save ranking if name set and scored */
       if(lineName.trim()&&finalSc>0&&df){saveScore(lineName.trim(),finalSc,df,rank.r,rank.c);}
-      /* TRAIL: send result to GAS (not for retire) */
-      if(finalSc>0&&!isRetire){sendResult(finalSc);}
+      /* TRAIL GP3: send result (not for retire) */
+      if(finalSc>0&&!isRetire){sendResultToTrail(finalSc);}
     }
   },[gs]);
   useEffect(()=>{if(gs==="playing"){bonusAwarded.current=false;trailSent=false;}},[gs]);
@@ -258,8 +258,6 @@ function App(){
   let ri=isPf?{r:"S",c:"#FFE66D",m:"パーフェクト！全カード制覇！🏆"}:gRank(sc,trn,tc);if(isRt)ri={...ri,m:"また遊ぼう！👋"};
   const stars=isPf||ri.r==="S"?3:ri.r==="A"?2:1;
   const maxW=isTab?580:460;const cardW=isTab?(hSz>4?82:96):(hSz>4?66:76);
-  function sendLine(){const mt="【分数テトリス ALT報告】\n名前: "+lineName+"\n💰 "+altTotal+"ALT";window.open("https://line.me/R/oaMessage/@trail_official/?"+encodeURIComponent(mt),"_blank");sAltTotal(0);sAltSession(0);sLineConfirm(false);}
-  const canReport=altTotal>0&&lineName.trim().length>0;
   const spLabel=spM==="sweep"?"🧹 消したい行をタップ":spM==="snipe"?"🎯 消したいブロックをタップ":spM==="slide"?(slideFrom?"🔀 移動先の行をタップ":"🔀 移動するブロックをタップ"):spM==="x2"?"✖️ 2倍にするブロックをタップ":spM==="half"?"➗ 半分にするブロックをタップ":spM==="third"?"🔹 1/3にするブロックをタップ":"";
   const curRk=rkTab==="week"?rkWeek:rkAll;
 
@@ -354,6 +352,7 @@ function App(){
             <div style={{fontSize:Math.round(28*fs),fontWeight:700,color:"#4ECDC4",lineHeight:1.2}}>+{altSession} ALT</div>
             <div style={{fontSize:Math.round(9*fs),opacity:0.5}}>合計: 🪙 {altTotal} ALT</div>
           </div>)}
+          {TRAIL_PLAYER&&!isRt&&sc>0&&(<div style={{fontSize:Math.round(14*fs),fontWeight:700,color:"#06d6a0",marginBottom:6}}>🪙 10 ALT を獲得！</div>)}
           {/* RANKING MINI */}
           {df&&rkWeek[df]&&rkWeek[df].length>0&&(<div style={{width:"100%",maxWidth:280,marginBottom:6}}>
             <div style={{fontSize:Math.round(10*fs),opacity:0.5,textAlign:"center",marginBottom:3}}>📅 週間ランキング（{DM[df].label}）</div>
@@ -382,21 +381,6 @@ function App(){
       </div>)}
     </div>)}
 
-    {/* ─── LINE REPORT (menu only) ─── */}
-    {gs==="menu"&&!rkScreen&&(<div style={{marginTop:20,width:"100%",maxWidth:maxW,background:"rgba(255,255,255,0.03)",borderRadius:16,padding:isTab?"18px 24px":"14px 18px",border:"1px solid rgba(255,255,255,0.06)"}}>
-      <div style={{fontSize:Math.round(13*fs),fontWeight:700,marginBottom:8,textAlign:"center"}}>💰 ALTをTRAILに報告する</div>
-      <div style={{display:"flex",flexDirection:"column",gap:8,alignItems:"center"}}>
-        {!lineConfirm?(<button onClick={()=>{if(canReport)sLineConfirm(true);}} disabled={!canReport} className="bs" style={{padding:isTab?"10px 28px":"8px 24px",fontSize:Math.round(13*fs),fontWeight:700,fontFamily:"'Fredoka',sans-serif",borderRadius:12,border:"none",cursor:canReport?"pointer":"default",background:canReport?"linear-gradient(135deg,#06d6a0,#118a7e)":"rgba(255,255,255,0.05)",color:canReport?"#fff":"rgba(255,255,255,0.25)",boxShadow:canReport?"0 4px 16px rgba(6,214,160,0.3)":"none"}}>{"💬 LINEで報告する（🪙 "+altTotal+" ALT）"}</button>)
-        :(<div className="fi" style={{background:"rgba(255,107,107,0.08)",borderRadius:12,padding:isTab?"14px 20px":"12px 16px",border:"1px solid rgba(255,107,107,0.2)",textAlign:"center"}}>
-          <div style={{fontSize:Math.round(12*fs),fontWeight:600,marginBottom:8}}>{"⚠️ "+altTotal+"ALTを報告してリセットします"}</div>
-          <div style={{display:"flex",gap:10,justifyContent:"center"}}>
-            <button onClick={()=>sLineConfirm(false)} className="bs" style={{padding:"8px 20px",fontSize:Math.round(12*fs),fontWeight:600,fontFamily:"'Fredoka',sans-serif",borderRadius:10,background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",color:"#fff",cursor:"pointer"}}>やめる</button>
-            <button onClick={sendLine} className="bs" style={{padding:"8px 20px",fontSize:Math.round(12*fs),fontWeight:700,fontFamily:"'Fredoka',sans-serif",borderRadius:10,background:"linear-gradient(135deg,#06d6a0,#118a7e)",border:"none",color:"#fff",cursor:"pointer"}}>OK！送る</button>
-          </div>
-        </div>)}
-      </div>
-      <div style={{fontSize:Math.round(9*fs),opacity:0.3,textAlign:"center",marginTop:6}}>報告するとALTはリセットされます</div>
-    </div>)}
 
     <style>{[
       "@keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}.fi{animation:fi .25s ease-out}",
