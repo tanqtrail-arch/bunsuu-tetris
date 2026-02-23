@@ -16,14 +16,6 @@
 const TRAIL_API = 'https://trail-game-pro-3-2.onrender.com';
 const TRAIL_PLAYER = new URLSearchParams(location.search).get('player') || null;
 
-function calcAlt(score) {
-  if (score >= 5000) return 20;
-  if (score >= 3000) return 15;
-  if (score >= 1000) return 10;
-  if (score >= 500)  return 5;
-  return 3;
-}
-
 function goHome() {
   window.location.href = TRAIL_PLAYER
     ? 'https://trail-game-pro-3-2.onrender.com'
@@ -31,10 +23,9 @@ function goHome() {
 }
 
 let trailSent = false;
-async function sendResultToTrail(score) {
+async function sendResultToTrail(score, alt) {
   if (!TRAIL_PLAYER || trailSent) return;
   trailSent = true;
-  const alt = calcAlt(score);
   try {
     await fetch(`${TRAIL_API}/api/external/game-result`, {
       method: 'POST',
@@ -264,7 +255,7 @@ function App(){
       /* save ranking if name set and scored */
       if(lineName.trim()&&finalSc>0&&df){saveScore(lineName.trim(),finalSc,df,rank.r,rank.c);}
       /* TRAIL GP3: send result (not for retire) */
-      if(finalSc>0&&!isRetire){sendResultToTrail(finalSc);}
+      if(finalSc>0&&!isRetire){sendResultToTrail(finalSc,totalAlt);}
     }
   },[gs]);
   useEffect(()=>{if(gs==="playing"){bonusAwarded.current=false;trailSent=false;}},[gs]);
@@ -367,7 +358,7 @@ function App(){
             <div style={{fontSize:Math.round(28*fs),fontWeight:700,color:"#4ECDC4",lineHeight:1.2}}>+{altSession} ALT</div>
             <div style={{fontSize:Math.round(9*fs),opacity:0.5}}>合計: 🪙 {altTotal} ALT</div>
           </div>)}
-          {TRAIL_PLAYER&&!isRt&&sc>0&&(<div style={{fontSize:Math.round(14*fs),fontWeight:700,color:"#06d6a0",marginBottom:6}}>{"🪙 "+calcAlt(sc)+" ALT を獲得！"}</div>)}
+          {TRAIL_PLAYER&&!isRt&&sc>0&&(<div style={{fontSize:Math.round(14*fs),fontWeight:700,color:"#06d6a0",marginBottom:6}}>{"🪙 "+altSession+" ALT を獲得！"}</div>)}
           {/* RANKING MINI */}
           {df&&rkWeek[df]&&rkWeek[df].length>0&&(<div style={{width:"100%",maxWidth:280,marginBottom:6}}>
             <div style={{fontSize:Math.round(10*fs),opacity:0.5,textAlign:"center",marginBottom:3}}>📅 週間ランキング（{DM[df].label}）</div>
