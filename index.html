@@ -134,7 +134,7 @@ function App(){
   const bonusAwarded=useRef(false);
   useEffect(()=>{if((gs==="perfect"||gs==="gameover")&&!bonusAwarded.current){bonusAwarded.current=true;if(sc>hiScore)sHiScore(sc);const rank=gs==="perfect"?{r:"S"}:gRank(sc,trn,tc);const st=gs==="perfect"||rank.r==="S"?3:rank.r==="A"?2:1;const cb=st===3?20:st===2?10:5;let fcb=0;if(df&&!clearedDiffs.includes(df)){fcb=30;sClearedDiffs(p=>[...p,df]);}setTimeout(()=>{sAltSession(s=>s+cb+fcb);sAltTotal(t=>t+cb+fcb);},400);
     // 🆕 クリアボーナスALT送信
-    setTimeout(()=>{if(typeof TrailNav!=='undefined'){TrailNav.earnAlt(cb+fcb,'クリアボーナス');TrailNav.flushAltWithRetry();TrailNav.showNav();}},500);
+    setTimeout(()=>{DarwinBridge.stageClear({score:sc,correct:tc,total:tc+(deck.length||0)});},500);
   }},[gs]);
   useEffect(()=>{if(gs==="playing")bonusAwarded.current=false;},[gs]);
 
@@ -263,25 +263,10 @@ function App(){
 }
 
 // 🆕 TRAIL共通ナビ用: ゲームホームに戻る
-window.showGameHome=function(){
-  // Note: React stateへの直接アクセスは不可なのでページリロードでホームに戻す
-  if(confirm('ゲームを中断してホームに戻りますか？')){
-    if(typeof TrailNav!=='undefined'){TrailNav.flushAltWithRetry();TrailNav.showNav();}
-    location.reload();
-  }
-};
+window.showGameHome=function(){ DarwinBridge.exit(); };
 
 ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
 </script>
-<!-- ===== 🆕 TRAIL共通ナビ ===== -->
-<script>
-TrailNav.init({
-  gameName: '分数カードパズル',
-  gameEmoji: '🧱',
-  gameHomeId: 'root',
-  tgp32Url: 'https://trail-game-pro-3-2.onrender.com',
-  apiBase:  'https://trail-game-pro-3-2.onrender.com/api',
-});
-</script>
+<script>DarwinBridge.ready();</script>
 </body>
 </html>
